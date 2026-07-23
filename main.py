@@ -12,7 +12,7 @@ headers = {
 }
 
 
-BASE_URL = "https://api.airtable.com/v0/appwr95EmedjJLiUQ/tbls9MJ4uzGQ8lrNV"
+BASE_URL = f"https://api.airtable.com/v0/{os.getenv('AIRTABLE_BASE_ID')}/{os.getenv('AIRTABLE_TABLE_ID')}"
 
 
 def make_request(method, url, **kwargs):
@@ -38,20 +38,32 @@ def make_request(method, url, **kwargs):
 
         except requests.exceptions.ConnectionError:
             print("The network is slow, couldn't load")
-            return None
+            continue
             
 
         except requests.exceptions.Timeout:
             print("Time session expired")
-            return None
+            continue
             
 
         except requests.exceptions.HTTPError as e:
-            print(f"HTTP Error: {e}")
-            print(f"Response body: {response.text}")
-            return None
-            
+             status_code = response.status_code
 
+             if 400 <= status_code < 500:
+                 print(f"HTTP Error: {e}")
+                 print(f"Response body: {response.text}")
+                 return None
+
+             elif 500 <= status_code < 600:
+                 print("A server error occured")
+                 continue
+
+             else:
+                 print(f"Error:{e}")
+                 return None
+
+
+        
     print("Maximum retries reached. Request failed.")
     return None
 
@@ -118,7 +130,7 @@ def show_tasks():
     data = get_tasks()
 
     if data is None:
-        return
+        return 
 
     target_keys = ["Name", "Status", "Notes"]
 
@@ -137,7 +149,7 @@ def show_tasks():
 def update_task():
     record_id = input("Which record id would you like to update?: ")
 
-    field = input("Which field would you like to update(Name, Status, Notes): ").capitalize()
+    field = input("Which field would you like to update(Name, Status, Notes): ").capitalize().strip()
 
     if field == "Name":
         new_name = input("Enter the new name: ")
